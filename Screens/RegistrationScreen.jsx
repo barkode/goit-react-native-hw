@@ -11,7 +11,15 @@ const RegistrationScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  regSignMesBtn: {},
+  regSignMesBtn: {
+    backgroundColor: "#FF6C00",
+    paddingTop: 16,
+    paddingRight: 32,
+    paddingBottom: 16,
+    paddingLeft: 32,
+    gap: 12,
+  },
+  // btnText: { width: 120, fontFamily: Roboto, fontWeight: 400, fontSize: 16 },
 });
 
 export default RegistrationScreen;
