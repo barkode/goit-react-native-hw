@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  SafeAreaView,
   StyleSheet,
   View,
   Text,
@@ -11,17 +12,22 @@ import imageBG from "./images/BG.jpg";
 
 const App = () => {
   return (
-    <View style={styles.container}>
-      <ImageBackground source={imageBG} style={styles.imageBG}>
-        <RegistrationScreen />
-      </ImageBackground>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <View style={styles.container}>
+          <ImageBackground source={imageBG} style={styles.imageBG}>
+            <RegistrationScreen />
+          </ImageBackground>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    zIndex: -1,
   },
   imageBG: {
     flex: 1,
