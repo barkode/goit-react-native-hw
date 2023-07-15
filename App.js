@@ -1,39 +1,52 @@
-// import React from "react";
-// import {
-//   SafeAreaView,
-//   StyleSheet,
-//   View,
-//   Text,
-//   Platform,
-//   ImageBackground,
-// } from "react-native";
-// import RegistrationScreen from "./Screens/RegistrationScreen";
-// import imageBG from "./images/BG.jpg";
-// import { Button } from "react-native-web";
+import React, { useState } from "react";
+import { View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { useFonts } from "expo-font";
+import RegistrationScreen from "./screens/RegistrationScreen";
+import LoginScreen from "./screens/LoginScreen";
 
-// const App = () => {
-//   return (
-//     <SafeAreaView style={styles.container}>
-//       <View style={styles.container}>
-//         <View style={styles.container}>
-//           <ImageBackground source={imageBG} style={styles.imageBG}>
-//             <RegistrationScreen />
-//           </ImageBackground>
-//         </View>
-//       </View>
-//     </SafeAreaView>
-//   );
-// };
+export default function App() {
+  const [screen, setScreen] = useState("RegistrationScreen");
+  const [fontsLoaded] = useFonts({
+    "Roboto-Black": require("./assets/fonts/Roboto-Black.ttf"),
+    "Roboto-Medium": require("./assets/fonts/Roboto-Medium.ttf"),
+    "Roboto-Regular": require("./assets/fonts/Roboto-Regular.ttf"),
+  });
 
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     zIndex: -1,
-//   },
-//   imageBG: {
-//     flex: 1,
-//     justifyContent: "center",
-//   },
-// });
+  if (!fontsLoaded) {
+    return null;
+  }
 
-// export default App;
+  return (
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        {screen === "RegistrationScreen" ? (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.keyboardAvoidingView}>
+            <RegistrationScreen setScreen={setScreen} />
+          </KeyboardAvoidingView>
+        ) : (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.keyboardAvoidingView}>
+            <LoginScreen setScreen={setScreen} />
+          </KeyboardAvoidingView>
+        )}
+
+        <StatusBar style="auto" />
+      </View>
+    </SafeAreaProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+});
