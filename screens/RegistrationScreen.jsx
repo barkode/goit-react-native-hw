@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
-  TouchableWithoutFeedback,
 } from "react-native";
 
 const RegistrationScreen = ({ setScreen }) => {
@@ -18,7 +17,6 @@ const RegistrationScreen = ({ setScreen }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitted, setSubmitted] = useState(false);
-
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
@@ -47,18 +45,14 @@ const RegistrationScreen = ({ setScreen }) => {
     setSubmitted(true);
   };
 
-  const handlePressOutside = () => {
-    Keyboard.dismiss();
-  };
-//---------------------------------<for example>---------------------------------
   if (submitted) {
     setTimeout(() => {
       setScreen("PostsScreen");
     }, 2000);
     return (
       <View style={styles.container}>
-        <Text style={
-          {
+        <Text
+          style={{
             fontFamily: "Roboto-Medium",
             fontWeight: 500,
             fontSize: 30,
@@ -66,70 +60,64 @@ const RegistrationScreen = ({ setScreen }) => {
             textAlign: "center",
             color: "#212121",
             marginTop: 100,
-          }
-        }>Дякуємо за реєстрацію!</Text>
+          }}>
+          Дякуємо за реєстрацію!
+        </Text>
       </View>
     );
   }
-//---------------------------------</for example>---------------------------------
   return (
-    <TouchableWithoutFeedback onPress={handlePressOutside}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.container}
-      >
-        <View style={styles.container}>
-          <Image
-            source={require("../images/PhotoBG.png")}
-            resizeMode="cover"
-            style={styles.image}
-          />
-          <View style={styles.form}>
-            {!isKeyboardOpen && (
-              <View style={styles.avatar}>
-                <TouchableOpacity style={styles.btnAddAvatar}>
-                  <Image
-                    source={require("../images/union.png")}
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
-            <Text style={styles.title}>Реєстрація</Text>
-            <View style={styles.inputsList}>
-              <TextInput
-                style={styles.input}
-                placeholder="Логін"
-                value={login}
-                onChangeText={setLogin}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Адреса електронної пошти"
-                value={email}
-                onChangeText={setEmail}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Пароль"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.container}>
+      <View style={styles.container}>
+        <Image
+          source={require("../images/bg.png")}
+          resizeMode="cover"
+          style={styles.image}
+        />
+        <View style={styles.form}>
+          {!isKeyboardOpen && (
+            <View style={styles.avatar}>
+              <TouchableOpacity style={styles.btnAddAvatar}>
+                <Image
+                  source={require("../images/cross.png")}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.btnRegister}
-              onPress={handleSubmit}
-            >
-              <Text style={styles.textRegister}>Зареєструватися</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setScreen("LoginScreen")}>
-              <Text style={styles.textLogin}>Вже є акаунт? Увійти</Text>
-            </TouchableOpacity>
+          )}
+          <Text style={styles.title}>Реєстрація</Text>
+          <View style={styles.inputsList}>
+            <TextInput
+              style={styles.input}
+              placeholder="Логін"
+              value={login}
+              onChangeText={setLogin}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Адреса електронної пошти"
+              value={email}
+              onChangeText={setEmail}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Пароль"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
           </View>
+          <TouchableOpacity style={styles.btnRegister} onPress={handleSubmit}>
+            <Text style={styles.textRegister}>Зареєструватися</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setScreen("LoginScreen")}>
+            <Text style={styles.textLogin}>Вже є акаунт? Увійти</Text>
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
