@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  View,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
@@ -20,23 +27,25 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
-        {screen === "RegistrationScreen" ? (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.keyboardAvoidingView}>
-            <RegistrationScreen setScreen={setScreen} />
-          </KeyboardAvoidingView>
-        ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.keyboardAvoidingView}>
-            <LoginScreen setScreen={setScreen} />
-          </KeyboardAvoidingView>
-        )}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          {screen === "RegistrationScreen" ? (
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={styles.keyboardAvoidingView}>
+              <RegistrationScreen setScreen={setScreen} />
+            </KeyboardAvoidingView>
+          ) : (
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={styles.keyboardAvoidingView}>
+              <LoginScreen setScreen={setScreen} />
+            </KeyboardAvoidingView>
+          )}
 
-        <StatusBar style="auto" />
-      </View>
+          <StatusBar style="auto" />
+        </View>
+      </TouchableWithoutFeedback>
     </SafeAreaProvider>
   );
 }
