@@ -12,6 +12,7 @@ import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import RegistrationScreen from "./screens/RegistrationScreen";
 import LoginScreen from "./screens/LoginScreen";
+import "react-native-gesture-handler";
 
 export default function App() {
   const [screen, setScreen] = useState("RegistrationScreen");
