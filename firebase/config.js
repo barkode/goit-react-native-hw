@@ -1,25 +1,24 @@
-// Для роботи із firebase обовʼязково треба ініціалізувати проект
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeApp } from "firebase/app";
-// Функція для підключення авторизації в проект
-import { getAuth } from "firebase/auth";
-// Функція для підключення бази даних у проект
+import { initializeAuth, getReactNativePersistence } from "firebase/auth/";
 import { getFirestore } from "firebase/firestore";
-// Функція для підключення сховища файлів в проект
-import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "api-key",
-  authDomain: "project-id.firebaseapp.com",
-  databaseURL: "https://project-id.firebaseio.com",
-  projectId: "project-id",
-  storageBucket: "project-id.appspot.com",
-  messagingSenderId: "sender-id",
-  appId: "app-id",
-  measurementId: "G-measurement-id",
+  apiKey: "AIzaSyADwhzo0GarEsznQokahsDYlGo7D3hcvrw",
+  authDomain: "goit-react-native-projec-a6161.firebaseapp.com",
+  projectId: "goit-react-native-projec-a6161",
+  storageBucket: "goit-react-native-projec-a6161.appspot.com",
+  messagingSenderId: "68334954039",
+  appId: "1:68334954039:web:b50771abb03d023e02c1b2",
+  measurementId: "G-13MHZJM12F",
 };
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
+export { auth };
+
+export const firestore = getFirestore(app);

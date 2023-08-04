@@ -1,143 +1,307 @@
-import React, { useState, useEffect } from "react";
-import { MaterialIcons } from "@expo/vector-icons";
-import { SimpleLineIcons } from "@expo/vector-icons";
+import React, { useState, useEffect, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
 
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 import {
+  TouchableOpacity,
   StyleSheet,
   View,
-  ImageBackground,
-  SafeAreaView,
-  Pressable,
-  Text,
-  Dimensions,
   FlatList,
+  Image,
+  Text,
+  ImageBackground,
+  Dimensions,
 } from "react-native";
-import PostItem from "../components/PostItem";
-import { Posts } from "../db/Posts";
 
-const backgroundPicture = "../images/bg.png";
-const userImage = "../images/user.jpg";
+import { collection, query, onSnapshot, where } from "firebase/firestore";
+import { firestore } from "../firebase/config";
 
-const ProfileScreen = ({ navigation }) => {
-  const [windowWidth, setWindowWidth] = useState(
-    Dimensions.get("window").width
-  );
+import { authSignOutUser } from "../redux/authOperations";
 
-  const [windowHeight, setWindowHeight] = useState(
+import Message from "../images/svg/message.svg";
+import Like from "../images/svg/like.svg";
+import Location from "../images/svg/location.svg";
+import Logout from "../images/svg/logout.svg";
+
+export const ProfileScreen = ({ navigation }) => {
+  const [fontsLoaded] = useFonts({
+    Roboto: require("../fonts/Roboto-Regular.ttf"),
+    RobotoMedium: require("../fonts/Roboto-Medium.ttf"),
+    RobotoBold: require("../fonts/Roboto-Bold.ttf"),
+  });
+
+  const [phoneWidth, setPhoneWidth] = useState(Dimensions.get("window").width);
+  const [phoneHeight, setPhoneHeight] = useState(
     Dimensions.get("window").height
   );
+
+  const [userPosts, setUserPosts] = useState([]);
+
+  const { login, userId, avatarImage } = useSelector((state) => state.auth);
+
+  const dispatch = useDispatch();
+
+  const getUserPosts = async () => {
+    try {
+      const ref = query(
+        collection(firestore, "posts"),
+        where("userId", "==", `${userId}`)
+      );
+      onSnapshot(ref, (snapshot) => {
+        setUserPosts(
+          snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }))
+        );
+      });
+    } catch (error) {
+      console.log("error-message", error.message);
+    }
+  };
+
+  useEffect(() => {
+    getUserPosts();
+  }, []);
 
   useEffect(() => {
     const onChange = () => {
       const width = Dimensions.get("window").width;
-      setWindowWidth(width);
+      setPhoneWidth(width);
       const height = Dimensions.get("window").height;
-      setWindowHeight(height);
+      setPhoneHeight(height);
     };
     const dimensionsHandler = Dimensions.addEventListener("change", onChange);
 
-    return () => dimensionsHandler?.remove();
+    return () => dimensionsHandler.remove();
   }, []);
+
+  useEffect(() => {
+    async function prepare() {
+      await SplashScreen.preventAutoHideAsync();
+    }
+    prepare();
+  }, []);
+
+  const onLayout = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View onLayout={onLayout} style={styles.container}>
       <ImageBackground
-        source={require(backgroundPicture)}
         style={{
-          ...styles.imageBgImage,
-          width: windowWidth,
-          height: windowHeight,
-        }}>
-        <View
-          style={{
-            flex: 1,
+          ...styles.imageBG,
+          width: phoneWidth,
+          height: phoneHeight,
+        }}
+        source={require("../images/bg.png")}>
+        <FlatList
+          ListEmptyComponent={
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: "#FFFFFF",
+                justifyContent: "center",
+                alignItems: "center",
+                padding: 16,
+                height: 240,
+                width: phoneWidth,
+              }}>
+              <Text style={{ ...styles.textUserName, fontSize: 16 }}>
+                У Вас немає постів
+              </Text>
+            </View>
+          }
+          ListHeaderComponent={
+            <View
+              style={{
+                ...styles.headerWrapper,
+                marginTop: phoneWidth > 500 ? 100 : 147,
+                width: phoneWidth,
+              }}>
+              <View
+                style={{
+                  ...styles.imageThumb,
+                  left: (phoneWidth - 120) / 2,
+                }}>
+                <Image
+                  style={styles.avatarImage}
+                  source={{ uri: avatarImage }}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={() => dispatch(authSignOutUser())}>
+                <Logout />
+              </TouchableOpacity>
+              <View
+                style={{
+                  ...styles.userTitleWrapper,
+                  width: phoneWidth - 16 * 2,
+                }}>
+                <Text
+                  style={{ ...styles.userTitle, fontFamily: "RobotoMedium" }}>
+                  {login}
+                </Text>
+              </View>
+            </View>
+          }
+          data={userPosts}
+          renderItem={({ item }) => (
+            <View
+              style={{
+                ...styles.cardContainer,
+                width: phoneWidth,
+              }}>
+              <Image
+                source={{ uri: item.photo }}
+                style={{
+                  ...styles.cardImage,
+                  width: phoneWidth - 16 * 2,
+                }}
+              />
+              <Text
+                style={{
+                  ...styles.cardTitle,
+                  width: phoneWidth - 16 * 2,
+                  fontFamily: "RobotoMedium",
+                }}>
+                {item.title}
+              </Text>
+              <View style={{ ...styles.cardThumb, width: phoneWidth - 16 * 2 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}>
+                  <TouchableOpacity
+                    style={styles.cardWrapper}
+                    onPress={() =>
+                      navigation.navigate("Коментарі", {
+                        postId: item.id,
+                        postPhoto: item.photo,
+                        commentsQuantity: item.commentsQuantity,
+                      })
+                    }>
+                    <Message
+                      fill={item.commentsQuantity === 0 ? "#BDBDBD" : "#FF6C00"}
+                    />
+                    <Text style={styles.cardText}>{item.commentsQuantity}</Text>
+                  </TouchableOpacity>
+                  <View style={{ ...styles.cardWrapper, marginLeft: 24 }}>
+                    <Like
+                      fill={item.likesQuantity === 0 ? "#BDBDBD" : "#FF6C00"}
+                    />
+                    <Text style={styles.cardText}>{item.likesQuantity}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.cardWrapper}
+                  onPress={() =>
+                    navigation.navigate("Мапа", { location: item.location })
+                  }>
+                  <Location />
+                  <Text style={styles.cardText}></Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{
+            flexGrow: 1,
             alignItems: "center",
-            marginTop: 147,
             borderTopLeftRadius: 25,
             borderTopRightRadius: 25,
-            backgroundColor: "#fff",
-            paddingHorizontal: 16,
-          }}>
-          <View style={styles.userAvatar}>
-            <ImageBackground
-              source={require(userImage)}
-              resizeMode="cover"
-              style={styles.userImageBackground}>
-              <Pressable style={[styles.delButton]}>
-                <MaterialIcons
-                  name="highlight-remove"
-                  size={24}
-                  color="#E8E8E8"
-                  style={{ backgroundColor: "#fff", borderRadius: 50 }}
-                />
-              </Pressable>
-            </ImageBackground>
-          </View>
-          <Pressable
-            style={{ position: "absolute", top: 24, right: 24 }}
-            onPress={() => navigation.navigate("Login")}
-            title="LogOut"
-            color="#fff">
-            <SimpleLineIcons
-              name="logout"
-              size={24}
-              color="#BDBDBD"
-              style={{ transform: [{ rotate: "180deg" }] }}
-            />
-          </Pressable>
-          <Text style={styles.userLabel}>Наталі Романова</Text>
-          <FlatList
-            data={Posts}
-            renderItem={({ item }) => <PostItem data={item} />}
-            keyExtractor={(item) => item.id}
-          />
-        </View>
+          }}
+          showsVerticalScrollIndicator={false}
+        />
       </ImageBackground>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
   },
-  imageBgImage: {
+  imageBG: {
     flex: 1,
     resizeMode: "cover",
   },
-  userImageBackground: { flex: 1 },
+  headerWrapper: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    alignItems: "center",
+  },
 
-  userAvatar: {
+  imageThumb: {
     position: "absolute",
+    top: -60,
     width: 120,
     height: 120,
-    top: -60,
+    backgroundColor: "#F6F6F6",
     borderRadius: 16,
-    overflow: "hidden",
   },
-  delButton: {
+  logoutButton: {
     position: "absolute",
-    bottom: 14,
-    right: -12,
+    top: 22,
+    right: 16,
   },
-  userLabel: {
-    fontFamily: "Roboto",
-    fontSize: 30,
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 16,
+    resizeMode: "cover",
+  },
+  userTitleWrapper: {
+    alignItems: "center",
     marginTop: 92,
     marginBottom: 32,
-    fontWeight: "medium",
-    textAlign: "center",
   },
-  postItem: {
-    justifyContent: "center",
-    alignItems: "flex-start",
+  userTitle: {
+    textAlign: "center",
+    fontSize: 30,
+    lineHeight: 35,
+    color: "#212121",
+  },
+  cardContainer: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+  },
+  cardImage: {
+    height: 240,
+    resizeMode: "cover",
+    borderRadius: 8,
+  },
+  cardTitle: {
+    marginTop: 8,
+    fontSize: 16,
+    lineHeight: 19,
+    color: "#212121",
+  },
+  cardThumb: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
     marginBottom: 35,
   },
-  postMeta: {
-    marginTop: 8,
+  cardWrapper: {
     flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    justifyContent: "space-between",
+  },
+  cardText: {
+    marginLeft: 4,
+    fontSize: 16,
+    lineHeight: 19,
+    color: "#212121",
   },
 });
-
-export default ProfileScreen;

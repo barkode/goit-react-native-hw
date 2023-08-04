@@ -1,330 +1,333 @@
 import React, { useState, useEffect } from "react";
-import { Camera } from "expo-camera";
-import * as Location from "expo-location";
-
+import { useSelector } from "react-redux";
+import { useFonts } from "expo-font";
 import {
-  TouchableWithoutFeedback,
+  Image,
+  Alert,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   View,
-  Text,
-  Image,
   TextInput,
+  KeyboardAvoidingView,
+  Text,
   TouchableOpacity,
+  Dimensions,
 } from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
 
-const CreatePostsScreen = ({ navigation }) => {
-  const [camera, setCamera] = useState(null);
-  const [postName, setPostName] = useState("");
-  const [postLocation, setPostLocation] = useState("");
-  const [postLocationGPS, setPostLocationGPS] = useState(null);
-  const [photo, setPhoto] = useState("");
-  const [isKeyboardShow, setIsKeyboardShow] = useState(false);
+import { nanoid } from "nanoid";
 
-  const postNameHandler = (text) => setPostName(text.trim());
-  const postLocationHandler = (text) => setPostLocation(text.trim());
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, addDoc } from "firebase/firestore";
+import { firestore } from "../firebase/config";
 
-  const takePhoto = async () => {
+import DownloadPhoto from "../images/svg/downloadPhoto.svg";
+import Location from "../images/svg/location.svg";
+import Trash from "../images/svg/trash.svg";
+
+export const CreatePostsScreen = ({ route, navigation }) => {
+  const [fontsLoaded] = useFonts({
+    Roboto: require("../fonts/Roboto-Regular.ttf"),
+    RobotoMedium: require("../fonts/Roboto-Medium.ttf"),
+    RobotoBold: require("../fonts/Roboto-Bold.ttf"),
+  });
+
+  const [image, setImage] = useState("");
+
+  const [windowWidth, setWindowWidth] = useState(
+    Dimensions.get("window").width
+  );
+  const [isFocusedTitle, setIsFocusedTitle] = useState(false);
+  const [isFocusedLocation, setIsFocusedLocation] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
+  const [regionName, setRegionName] = useState("");
+
+  const [isDisabledPublish, setIsDisabledPublish] = useState(true);
+  const [isDisabledTrash, setIsDisabledTrash] = useState(true);
+
+  const { userId, login } = useSelector((state) => state.auth);
+
+  const titleHandler = (title) => setTitle(title);
+
+  const uploadPhotoToServer = async (image) => {
     try {
-      const photo = await camera.takePictureAsync();
-      setPhoto(photo.uri);
+      const response = await fetch(image);
+      const file = await response.blob();
+      const uniquePostId = nanoid();
+      const storage = getStorage();
+      const storageRef = ref(storage, `postImage/${uniquePostId}`);
+
+      await uploadBytes(storageRef, file);
+
+      const photoRef = await getDownloadURL(storageRef);
+      return photoRef;
     } catch (error) {
-      console.log("error", error.message);
+      console.log("error-message", error.message);
     }
   };
 
+  const uploadPostToServer = async () => {
+    try {
+      const imageRef = await uploadPhotoToServer(image);
+      console.log(
+        imageRef,
+        location,
+        userId,
+        login,
+        regionName,
+        postRef,
+        title
+      );
+      const postRef = await addDoc(collection(firestore, "posts"), {
+        photo: imageRef,
+        title,
+        location,
+        userId,
+        login,
+        regionName,
+      });
+      Alert.alert(`Ваша публікація пройшла успішно`);
+      navigation.navigate("Публікації");
+    } catch (error) {
+      console.log("error-message", error.message);
+    }
+  };
+
+  const onPublish = () => {
+    if (!title.trim() || !location) {
+      Alert.alert(`Усі поля мають бути заповнені!`);
+      return;
+    }
+    uploadPostToServer();
+    setImage();
+    setTitle("");
+    setLocation("");
+    setRegionName("");
+    Keyboard.dismiss();
+  };
+
+  const onDelete = () => {
+    setTitle("");
+    setLocation("");
+    setImage();
+    Alert.alert(`Вилучення пройшло успішно`);
+    Keyboard.dismiss();
+  };
   useEffect(() => {
-    const getCameraPermission = async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        setErrorMsg(
-          "Access denied. Permission is required to access the camera."
-        );
-        return;
-      }
+    if (route.params) {
+      setImage(route.params.photo);
+      setLocation(route.params.location);
+      setRegionName(route.params.regionName);
+      console.log(regionName);
+    }
+  }, [route.params]);
+
+  useEffect(() => {
+    const onChange = () => {
+      const width = Dimensions.get("window").width;
+      setWindowWidth(width);
     };
+    const dimensionsHandler = Dimensions.addEventListener("change", onChange);
 
-    const getLocationPermission = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setErrorMsg(
-          "Access denied. Permission is required to access the location."
-        );
-        return;
-      }
-      let location = await Location.getCurrentPositionAsync({});
-      const coords = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      };
-
-      setPostLocationGPS(coords);
-    };
-
-    getCameraPermission();
-    getLocationPermission();
+    return () => dimensionsHandler.remove();
   }, []);
 
-  const isSubmitButtonDisabled = () => {
-    return !photo || postName === "" || postLocation === "" ? true : false;
-  };
+  useEffect(() => {
+    image && title && location
+      ? setIsDisabledPublish(false)
+      : setIsDisabledPublish(true);
+  }, [title, location, image]);
 
-  const onSubmitHandler = async () => {
-    const newPost = {
-      id: 2888,
-      title: postName,
-      image: photo,
-      comments: 0,
-      likes: 0,
-      location: { country: postLocation, ...postLocationGPS },
-    };
-    navigation.navigate("DefaultPostScreen", {
-      newPost,
-    });
-    clearPostMeta();
-    Keyboard.dismiss();
-  };
-
-  const clearPostMeta = () => {
-    setPostName("");
-    setPostLocation("");
-    setPhoto("");
-  };
-
-  const keyboardHide = () => {
-    setIsKeyboardShow(false);
-    Keyboard.dismiss();
-  };
+  useEffect(() => {
+    image || title || location
+      ? setIsDisabledTrash(false)
+      : setIsDisabledTrash(true);
+  }, [title, location, image]);
 
   return (
-    <ScrollView style={styles.container}>
-      <TouchableWithoutFeedback onPress={keyboardHide}>
-        <View>
-          <View
-            style={{
-              height: "100%",
-              justifyContent: "space-between",
-            }}>
-            <View>
-              {photo ? (
-                <View style={styles.takenPhotoContainer}>
-                  <Image
-                    source={{ uri: photo }}
-                    style={{ height: 240, width: "100%" }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}>
+      <View style={{ flex: 1 }}>
+        <ScrollView>
+          <View style={{ ...styles.section, width: windowWidth }}>
+            {image ? (
+              <View>
+                <Image
+                  style={{ ...styles.image, width: windowWidth - 16 * 2 }}
+                  source={{ uri: image }}
+                />
+                <TouchableOpacity
+                  style={{
+                    position: "absolute",
+                    top: 90,
+                    left: (windowWidth - 60 - 16 * 2) / 2,
+                  }}>
+                  <DownloadPhoto
+                    onPress={() => navigation.navigate("Camera")}
+                    opacity={0.3}
                   />
-                  <TouchableOpacity
-                    style={styles.newPhotoButton}
-                    onPress={() => setPhoto("")}>
-                    <Ionicons name="camera-reverse" size={24} color="white" />
-                    <Text style={{ color: "#FFFFFF" }}>Змінити фото</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <Camera ref={setCamera} style={styles.camera}>
-                  <TouchableOpacity
-                    style={styles.takePhotoButton}
-                    onPress={takePhoto}>
-                    <Ionicons name="camera-sharp" size={20} color="#BDBDBD" />
-                  </TouchableOpacity>
-                </Camera>
-              )}
-
-              <View style={styles.formBox}>
-                <TouchableOpacity>
-                  <Text style={styles.loadLabel}>Завантажте фото</Text>
                 </TouchableOpacity>
-                <KeyboardAvoidingView
-                  behavior={Platform.OS == "ios" ? "padding" : "height"}>
-                  <TextInput
-                    value={postName}
-                    onChangeText={postNameHandler}
-                    placeholder="Назва..."
-                    placeholderTextColor="#BDBDBD"
-                    style={styles.input}
-                    onFocus={() => {
-                      setIsKeyboardShow(true);
-                    }}
-                  />
-                  <View>
-                    <Ionicons
-                      style={styles.locationIcon}
-                      name="location-outline"
-                      size={22}
-                      color="#BDBDBD"
-                    />
-                    <TextInput
-                      value={postLocation}
-                      onChangeText={postLocationHandler}
-                      placeholder="Місцевість..."
-                      placeholderTextColor="#BDBDBD"
-                      style={[styles.input, styles.addPlace]}
-                      onFocus={() => {
-                        setIsKeyboardShow(true);
-                      }}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    title={"Опублікувати"}
-                    onPress={onSubmitHandler}
-                    accessibilityLabel="Опублікувати"
-                    activeOpacity={0.8}
-                    style={[
-                      styles.submitButton,
-                      isSubmitButtonDisabled()
-                        ? styles.invalidButton
-                        : styles.validButton,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.submitBtnText,
-                        isSubmitButtonDisabled()
-                          ? styles.invalidBtn
-                          : styles.validBtn,
-                      ]}>
-                      Опублікувати
-                    </Text>
-                  </TouchableOpacity>
-                </KeyboardAvoidingView>
               </View>
+            ) : (
+              <View
+                style={{ ...styles.contentBlock, width: windowWidth - 16 * 2 }}>
+                <TouchableOpacity>
+                  <DownloadPhoto
+                    onPress={() => navigation.navigate("Камера")}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+            <View style={{ width: "100%", alignItems: "flex-start" }}>
+              <Text style={styles.text}>Завантажте фото</Text>
             </View>
+            <View style={{ width: windowWidth - 16 * 2 }}>
+              <TextInput
+                style={{
+                  ...styles.input,
+                  borderColor: isFocusedTitle ? "#FF6C00" : "#E8E8E8",
+                  fontFamily: "Roboto",
+                }}
+                onFocus={() => setIsFocusedTitle(true)}
+                onBlur={() => setIsFocusedTitle(false)}
+                value={title}
+                placeholder="Назва..."
+                cursorColor={"#BDBDBD"}
+                placeholderTextColor={"#BDBDBD"}
+                onChangeText={titleHandler}></TextInput>
+              <TextInput
+                style={{
+                  ...styles.input,
+                  borderColor: isFocusedLocation ? "#FF6C00" : "#E8E8E8",
+                  paddingLeft: 26,
+                  fontFamily: "Roboto",
+                }}
+                onFocus={() => setIsFocusedLocation(true)}
+                onBlur={() => setIsFocusedLocation(false)}
+                onChangeText={setLocation}
+                // value={
+                //   regionName
+                //     ? `${regionName[0].city}, ${regionName[0].country}`
+                //     : " "
+                // }
+                textContentType={"location"}
+                placeholder="Місцевість..."
+                cursorColor={"#BDBDBD"}
+                placeholderTextColor={"#BDBDBD"}></TextInput>
+              <Location
+                style={styles.locationIcon}
+                onPress={() =>
+                  navigation.navigate("Мапа", {
+                    location,
+                  })
+                }
+              />
+            </View>
+            <TouchableOpacity
+              style={{
+                ...styles.publishButton,
+                width: windowWidth - 16 * 2,
+                backgroundColor: isDisabledPublish ? "#F6F6F6" : "#FF6C00",
+              }}
+              onPress={onPublish}
+              disabled={isDisabledPublish}>
+              <Text
+                style={{
+                  ...styles.textPublishButton,
+                  color: isDisabledPublish ? "#BDBDBD" : "#FFFFFF",
+                  fontFamily: "Roboto",
+                }}>
+                Опублікувати
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                ...styles.trashButton,
+                backgroundColor: isDisabledTrash ? "#F6F6F6" : "#FF6C00",
+              }}
+              onPress={onDelete}
+              disabled={isDisabledTrash}>
+              <Trash stroke={isDisabledTrash ? "#BDBDBD" : "#FFFFFF"} />
+            </TouchableOpacity>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </ScrollView>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
-
-export default CreatePostsScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-  header: {
-    position: "relative",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 55,
-    paddingBottom: 11,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.3)",
-  },
-  title: {
-    fontSize: 17,
-    lineHeight: 22,
-  },
 
-  backBtn: {
-    position: "absolute",
-    top: 55,
-    left: 16,
+  section: {
+    flex: 1,
+    alignItems: "center",
+    marginTop: 32,
+    paddingHorizontal: 16,
   },
-  camera: {
+  image: {
     height: 240,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F6F6F6",
+
+    resizeMode: "cover",
     borderRadius: 8,
+  },
+  contentBlock: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 240,
+    backgroundColor: "#F6F6F6",
+    borderStyle: "solid",
     borderWidth: 1,
+    borderRadius: 8,
     borderColor: "#E8E8E8",
-    marginHorizontal: 16,
-    marginTop: 32,
   },
-  takenPhotoContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginTop: 32,
-  },
-  takePhotoButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    height: 60,
-    width: 60,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    borderRadius: 50,
-  },
-  cameraIcon: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "transparent",
-  },
-  loadLabel: {
-    fontSize: 16,
-    fontWeight: "400",
-    color: "#BDBDBD",
-    marginBottom: 32,
-  },
-  formBox: {
-    marginHorizontal: 16,
+  text: {
     marginTop: 8,
+    marginBottom: 16,
+    color: "#BDBDBD",
+    fontSize: 16,
+    lineHeight: 19,
   },
   input: {
+    marginTop: 16,
+    paddingTop: 0,
+    paddingBottom: 0,
+    height: 56,
     borderBottomWidth: 1,
-    borderBottomColor: "#E8E8E8",
+    borderStyle: "solid",
+    borderColor: "#E8E8E8",
     fontSize: 16,
-    fontWeight: "400",
-    height: 48,
-    padding: 16,
-    marginBottom: 16,
-    borderBottomColor: "#E8E8E8",
-    borderBottomWidth: 1,
-  },
-  location: {
-    position: "absolute",
-    left: 0,
-    bottom: 15,
-  },
-  addPlace: {
-    paddingLeft: 28,
+    lineHeight: 19,
+    color: "#212121",
   },
   locationIcon: {
     position: "absolute",
-    top: 10,
-    left: 4,
+    bottom: 16,
   },
-
-  submitButton: {
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 32,
-    marginBottom: 100,
-    height: 50,
-    borderWidth: 1,
+  publishButton: {
+    height: 51,
+    marginTop: 27,
+    paddingVertical: 16,
     borderRadius: 100,
-    borderColor: "#F6F6F6",
   },
-  validButton: {
-    backgroundColor: "#FF6C00",
-    color: "#FFFFFF",
-  },
-  invalidButton: {
-    backgroundColor: "#F6F6F6",
+  textPublishButton: {
+    fontSize: 16,
+    lineHeight: 19,
+    textAlign: "center",
     color: "#BDBDBD",
   },
-  submitBtnText: { fontFamily: "Roboto" },
-  deleteWrap: {
-    height: 40,
+  trashButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 80,
     width: 70,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F6F6F6",
+    height: 40,
     borderRadius: 20,
-  },
-  newPhotoButton: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    top: 0,
-    left: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
   },
 });
